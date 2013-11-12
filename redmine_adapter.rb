@@ -15,38 +15,29 @@ class RedmineAdapter
     @project = settings["project"]
     @issues = []
     @wiki_page = []
+    @logfile = File.dirname(__FILE__) + '/log/genminutes.log'
   end
 
   def get_updated_issues(date, project, versions)
     get_issues if @issues.empty?
-    issues = []
+    updated_issues = []
     @issues.each do |issue|
-      issue_project = issue["project"] ? issue["project"]["name"] : ""
-      issue_version = issue["fixed_version"] ? issue["fixed_version"]["name"] : ""
-      issue_status = issue["status"] ? issue["status"]["name"] : ""
-      issue_updated_on = Date.parse(issue["updated_on"])
-      if  date <= issue_updated_on && issue_status != "終了" && project == issue_project && versions.include?(issue_version)
-        issues << issue
-        #puts issue["id"].to_s + " : " + issue["subject"]
+      if  date <= issue.updated_on && issue.status_name != "終了" && project == issue.project_name && versions.include?(issue.fixed_version_name)
+        updated_issues << issue
       end
     end
-    return issues
+    return updated_issues
   end
 
   def get_non_updated_issues(date, project, versions)
     get_issues if @issues.empty?
-    issues = []
+    non_updated_issues = []
     @issues.each do |issue|
-      issue_project = issue["project"] ? issue["project"]["name"] : ""
-      issue_version = issue["fixed_version"] ? issue["fixed_version"]["name"] : ""
-      issue_status = issue["status"] ? issue["status"]["name"] : ""
-      issue_updated_on = Date.parse(issue["updated_on"])
-      if issue_updated_on<  date && issue_status != "終了" && project == issue_project && versions.include?(issue_version)
-        issues << issue
-        #puts issue["id"].to_s + " : " + issue["subject"]
+      if issue.updated_on < date && issue.status_name != "終了" && project == issue.project_name && versions.include?(issue.fixed_version_name)
+        non_updated_issues << issue
       end
     end
-    return issues
+    return non_updated_issues
   end
 
   def get_issues
@@ -54,6 +45,7 @@ class RedmineAdapter
     page = 1
     begin
       option = "?page=#{page}&limit=100&status_id=*&project_id=lastnote"
+      #res =  `curl -v -H "Content-Type: application/json" -X GET -H "X-Redmine-API-Key: #{@api_key}" -u #{@usr}:#{@pass} "#{@url}/issues.json#{option}" >> #{@logfile} 2>&1`
       res =  `curl -v -H "Content-Type: application/json" -X GET -H "X-Redmine-API-Key: #{@api_key}" -u #{@usr}:#{@pass} "#{@url}/issues.json#{option}"`
       File.write("issues/"+ timenow + "-" + page.to_s + ".json", res)
       page = page + 1
@@ -63,17 +55,19 @@ class RedmineAdapter
 
     filenames.each do |filename|
       data = JSON::parse(File.read("issues/" + filename))
-      @issues += data["issues"]
+      data["issues"].each do |d|
+        @issues << RedmineIssue.create(d)
+      end
     end
     return @issues
   end
 
   def get_wiki_page(project, title)
     # timenow = Time.now.strftime("%Y%m%d%H%M%S")
-    @wiki_page =  `curl -v -H "Content-Type: application/json" -X GET -H "X-Redmine-API-Key: #{@api_key}" "#{@url}/projects/#{project}/wiki/#{title}.json"`
+    wiki_page = `curl -v -H "Content-Type: application/json" -X GET -H "X-Redmine-API-Key: #{@api_key}" "#{@url}/projects/#{project}/wiki/#{title}.json"`
     # File.write("wiki_pages/"+ "#{title}" + timenow + ".json", @wiki_page)
-    File.write("wiki_pages/"+ "#{title}" + ".json", @wiki_page)
-    @wiki_page
+    File.write("wiki_pages/"+ "#{title}" + ".json", wiki_page)
+    RedmineWikiPage.create(wiki_page)
   end
 
   def send_wiki_page(project, title)
@@ -81,7 +75,6 @@ class RedmineAdapter
   end
 
   def get_latest_issue(dir)
-
     filenames = `ls #{dir}/`.split("\n")
     filenames2 = Hash.new{ |h,k| h[k] = [] }
     latest = nil
@@ -96,7 +89,6 @@ class RedmineAdapter
     end
 
     return filenames2["#{latest}"]
-
   end
 
   def latest_date(date1, date2)

@@ -5,6 +5,9 @@ require 'json'
 require 'yaml'
 require File.dirname(__FILE__) + '/GCal'
 require 'google/api_client'
+require File.dirname(__FILE__) + '/issue'
+require File.dirname(__FILE__) + '/wiki_page'
+require File.dirname(__FILE__) + '/redmine_adapter'
 
 ##########################################
 ### MinutesGenerator
@@ -15,30 +18,15 @@ class MinutesGenerator
     @gcal = GCal.new('GenMinutes')
     @google_calendar_id = YAML.load_file(File.dirname(__FILE__) + '/settings.yml')["google_calendar_id"]
     @project = YAML.load_file(File.dirname(__FILE__) + '/settings.yml')["project"]
-    @versions = YAML.load_file(File.dirname(__FILE__) + '/settings.yml')["versions"]
-    @title = File.read(File.dirname(__FILE__) + '/latest_iteration.txt').chomp
     @redmine_adapter = RedmineAdapter.new
     @issues_for_review = nil
     @issues_for_non_target_review = nil
     @wiki_page = nil
   end
 
-  ### 議事録を送る ###
-  def send_minutes
-    title = @wiki_page["wiki_page"]["title"]
-    @redmine_adapter.send_wiki_page(@project, title)
-  end
-
-  ### 議事録をファイルに保存する ###
-  def save_minutes
-    title = @wiki_page["wiki_page"]["title"]
-    File.write("wiki_pages/"+ "#{title}" + ".json", @wiki_page.to_json) if @wiki_page != nil
-  end
-
   ### 議事録を新規作成する ###
   def create_minutes
     load_template_minutes
-    @title = increase_number(@title)
     create_title
     create_text
     create_version
@@ -61,27 +49,37 @@ class MinutesGenerator
 
   private
 
+  ### 議事録を送る ###
+  def send_minutes
+    @redmine_adapter.send_wiki_page(@project, @wiki_page.title)
+  end
+
+  ### 議事録をファイルに保存する ###
+  def save_minutes
+    File.write("wiki_pages/"+ "#{@wiki_page.title}" + ".json", @wiki_page.data.to_json) if @wiki_page != nil
+  end
+
   ### タイトルをファイルに書き出す ###
   def save_title
-    File.write(File.dirname(__FILE__) + '/latest_iteration.txt', @title)
+    File.write(File.dirname(__FILE__) + '/latest_iteration.txt', @wiki_page.title)
   end
 
   def load_template_minutes
-    @wiki_page = JSON::parse(File.read("wiki_pages/template.json"))
+    RedmineWikiPage.read("wiki_pages/template.json")
   end
 
   def create_title
-    @wiki_page["wiki_page"]["title"] = @title
+    @wiki_page.title = @wiki_page.next_wiki_page_title
   end
 
   def create_text
     second_latest_date, latest_date = get_event_date_last_two
     text = ""
-    text << "h1. #{@title}\n\n"
+    text << "h1. #{@wiki_page.title}\n\n"
     text << "マネージャ: AAAA\n"
     text << "書記: ????\n"
     text << "期間: #{second_latest_date.to_s}～#{latest_date.to_s}\n"
-    text << "[[#{decrease_number(@title)}|前回(#{decrease_number(@title)})へ]]\n"
+    text << "[[#{@wiki_page.previous_wiki_page_title}|前回(#{@wiki_page.previous_wiki_page_title})へ]]\n"
     text << "[[Ms?.?.?|直近のバージョンアップ]]\n\n"
     text << "h1. #{latest_date.to_s}\n\n"
     text << "参加者:\n\n"
@@ -89,15 +87,15 @@ class MinutesGenerator
     text << "h3. 2. 新規チケットの作成について\n\n"
     text << "h3. 3. GN開発合宿について\n\n"
     text << "h3. 4. その他\n\n"
-    @wiki_page["wiki_page"]["text"] = text
+    @wiki_page.text = text
   end
 
   def create_version
-    @wiki_page["wiki_page"]["version"] = 1
+    @wiki_page.version = 1
   end
 
   def update_text
-    text = @wiki_page["wiki_page"]["text"]
+    text = @wiki_page.text
     second_latest_date, latest_date = get_event_date_last_two
     get_issues(second_latest_date,latest_date)
     text << "h1. #{latest_date}\n\n"
@@ -106,47 +104,30 @@ class MinutesGenerator
     text << "h3. 1. チケットのレビュー\n\n"
     text << "(更新あり)\n"
     @issues_for_review.each do |issue|
-      issue_id = issue["id"]
-      issue_status = issue["status"] ? issue["status"]["name"] : ""
-      issue_subject = issue["subject"]
-      issue_assigned_to = issue["assigned"] ? issue["assigned"]["name"] : ""
-      issue_version = issue["fixed_version"] ? issue["fixed_version"]["name"] : ""
-      text << "##{issue_id} #{issue_status} #{issue_subject} #{issue_assigned_to} #{issue_version}\n"
+      text << "##{issue.id} #{issue.status_name} #{issue.subject} #{issue.assigned_to_name} #{issue.fixed_version_name}\n"
     end
 
     text << "\n"
     text << "(更新なし)\n"
     @issues_for_non_target_review.each do |issue|
-      issue_id = issue["id"]
-      issue_status = issue["status"] ? issue["status"]["name"] : ""
-      issue_subject = issue["subject"]
-      issue_assigned_to = issue["assigned"] ? issue["assigned"]["name"] : ""
-      issue_version = issue["fixed_version"] ? issue["fixed_version"]["name"] : ""
-      text << "##{issue_id} #{issue_status} #{issue_subject} #{issue_assigned_to} #{issue_version}\n"
+      text << "##{issue.id} #{issue.status_name} #{issue.subject} #{issue.assigned_to_name} #{issue.fixed_version_name}\n"
     end
-    @wiki_page["wiki_page"]["text"] = text
+    @wiki_page.text = text
   end
 
   def get_wiki_page
-    @wiki_page = JSON::parse(@redmine_adapter.get_wiki_page(@project, @title))
+    title = File.read(File.dirname(__FILE__) + '/latest_iteration.txt').chomp
+    @wiki_page = @redmine_adapter.get_wiki_page(@project, title)
   end
 
   def get_issues(second_latest_date, latest_date)
     project = "LastNote"
-    @issues_for_review = @redmine_adapter.get_updated_issues(second_latest_date, project, @versions)
-    @issues_for_non_target_review = @redmine_adapter.get_non_updated_issues(second_latest_date, project, @versions)
+    versions = YAML.load_file(File.dirname(__FILE__) + '/settings.yml')["versions"]
+    @issues_for_review = @redmine_adapter.get_updated_issues(second_latest_date, project, versions)
+    @issues_for_non_target_review = @redmine_adapter.get_non_updated_issues(second_latest_date, project, versions)
   end
 
-  def increase_number(title)
-    title =~ /([A-z]*)(\d*)/
-    $1 + "%04d" % ($2.to_i + 1)
-  end
-
-  def decrease_number(title)
-    title =~ /([A-z]*)(\d*)/
-    $1 + "%04d" % ($2.to_i - 1)
-  end
-
+  ### 最新のイベントの日付を取得 ###
   def get_latest_event_date
     event_list = @gcal.event_list_find_by_name(@google_calendar_id, ".*談話会$")
     date_list = []
@@ -160,6 +141,7 @@ class MinutesGenerator
     date_list.sort.reverse.first
   end
 
+  ### 最新の2つのイベントの日付を取得 ###
   def get_event_date_last_two
     event_list = @gcal.event_list_find_by_name(@google_calendar_id, ".*談話会$")
     date_list = []
@@ -175,20 +157,8 @@ class MinutesGenerator
 end
 ##########################################
 
-class Issue
-end
-
-class RedmineIssue
-  attr_accessor :project_id, :tracker_id, :status_id, :priority_id, :subject, :description,
-                :category_id, :fixed_version_id, :assigned_to_id, :parent_issue_id, :custom_fields, :watcher_user_ids
-  def initialize()
-  end
-
-  def 
-end
-
 minutes_generator = MinutesGenerator.new
 #minutes_generator.get_wiki_page
-#minutes = minutes_generator.update_minutes
+minutes = minutes_generator.update_minutes
 minutes = minutes_generator.create_minutes
 #print minutes
