@@ -67,26 +67,26 @@ class MinutesGenerator
 
   ### 議事録のテンプレートファイルの読み込み ###
   def load_template_minutes
-    RedmineWikiPage.read("wiki_pages/template.json")
+    @wiki_page = RedmineWikiPage.read("wiki_pages/template.json")
   end
 
   ### タイトルを作成 ###
   def create_title
+    @wiki_page.title = File.read(File.dirname(__FILE__) + '/latest_iteration.txt')
     @wiki_page.title = @wiki_page.next_wiki_page_title
   end
 
   ### テキストを作成 ###
   def create_text
-    second_latest_date, latest_date = get_event_date_last_two(".*談話会$")
     text = ""
     text << "h1. #{@wiki_page.title}\n\n"
     text << "マネージャ: AAAA\n"
     text << "書記: ????\n"
-    text << "期間: #{second_latest_date.to_s}～#{latest_date.to_s}\n"
+    text << "期間: #{@second_latest_event_date.to_s}～#{@latest_event_date.to_s}\n"
     text << "[[#{@wiki_page.previous_wiki_page_title}|前回(#{@wiki_page.previous_wiki_page_title})へ]]\n"
     text << "[[Ms?.?.?|直近のバージョンアップ]]\n\n"
-    text << "h1. #{latest_date.to_s}\n\n"
     text << "参加者:\n\n"
+    text << "h1. #{@latest_event_date.to_s}\n\n"
     text << "h3. 1. 本イテレーションの方針について\n\n"
     text << "h3. 2. 新規チケットの作成について\n\n"
     text << "h3. 3. GN開発合宿について\n\n"
@@ -102,9 +102,8 @@ class MinutesGenerator
   ### テキストをアップデート ###
   def update_text
     text = @wiki_page.text
-    second_latest_date, latest_date = get_event_date_last_two(".*談話会$")
-    get_issues(second_latest_date,latest_date)
-    text << "h1. #{latest_date}\n\n"
+    get_issues(@second_latest_event_date, @latest_event_date)
+    text << "h1. #{@latest_event_date}\n\n"
     text << "参加者: 乃村，木村，吉井，檀上，村田，岡田，北垣，河野\n\n"
 
     text << "h3. 1. チケットのレビュー\n\n"
@@ -133,16 +132,6 @@ class MinutesGenerator
     versions = YAML.load_file(File.dirname(__FILE__) + '/settings.yml')["versions"]
     @issues_for_review = @redmine_adapter.get_updated_issues(second_latest_date, project, versions)
     @issues_for_non_target_review = @redmine_adapter.get_non_updated_issues(second_latest_date, project, versions)
-  end
-
-  ### イベントの最近の日付のデータを取得 ###
-  def get_latest_event_date(name)
-    @gcal.get_latest_event_date(@google_calendar_id, name)
-  end
-
-  ### イベントの最近2つの日付データを取得 ###
-  def get_event_date_last_two(name)
-    @gcal.get_event_date_last_two(@google_calendar_id, name)
   end
 end
 ##########################################
