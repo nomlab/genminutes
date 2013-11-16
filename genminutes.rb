@@ -14,9 +14,10 @@ require File.dirname(__FILE__) + '/redmine_adapter'
 ### Issueの情報を元に，議事録を作成する．
 ##########################################
 class MinutesGenerator
-  def initialize
-    @gcal = GCal.new('GenMinutes')
-    @google_calendar_id = YAML.load_file(File.dirname(__FILE__) + '/settings.yml')["google_calendar_id"]
+  def initialize(second_latest_event_date=nil, latest_event_date=nil, project=nil, redmine_adapter=nil,
+                 issues_for_review=nil, issues_for_on_target_review=nil,wiki_page=nil)
+    @second_latest_event_date = second_latest_event_date
+    @latest_event_date = latest_event_date
     @project = YAML.load_file(File.dirname(__FILE__) + '/settings.yml')["project"]
     @redmine_adapter = RedmineAdapter.new
     @issues_for_review = nil
@@ -139,8 +140,14 @@ class MinutesGenerator
 end
 ##########################################
 
-minutes_generator = MinutesGenerator.new
-#minutes_generator.get_wiki_page
-minutes = minutes_generator.update_minutes
-minutes = minutes_generator.create_minutes
-#print minutes
+### main
+@gcal = GCal.new('GenMinutes')
+@google_calendar_id = YAML.load_file(File.dirname(__FILE__) + '/settings.yml')["google_calendar_id"]
+second_latest_date, latest_date = @gcal.get_event_date_last_two(@google_calendar_id, ".*談話会$")
+minutes_generator = MinutesGenerator.new(second_latest_date, latest_date)
+today = Date.today
+#if today == latest_date - 3
+  minutes = minutes_generator.update_minutes
+#elsif today == latest_date
+  minutes = minutes_generator.create_minutes
+#end
