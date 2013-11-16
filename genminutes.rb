@@ -78,6 +78,7 @@ class MinutesGenerator
 
   ### テキストを作成 ###
   def create_text
+    members = File.readlines(File.dirname(__FILE__) + '/member.txt').map{|member| member.chomp}
     text = ""
     text << "h1. #{@wiki_page.title}\n\n"
     text << "マネージャ: AAAA\n"
@@ -85,8 +86,8 @@ class MinutesGenerator
     text << "期間: #{@second_latest_event_date.to_s}～#{@latest_event_date.to_s}\n"
     text << "[[#{@wiki_page.previous_wiki_page_title}|前回(#{@wiki_page.previous_wiki_page_title})へ]]\n"
     text << "[[Ms?.?.?|直近のバージョンアップ]]\n\n"
-    text << "参加者:\n\n"
     text << "h1. #{@latest_event_date.to_s}\n\n"
+    text << "参加者:#{members.join(", ")}\n\n"
     text << "h3. 1. 本イテレーションの方針について\n\n"
     text << "h3. 2. 新規チケットの作成について\n\n"
     text << "h3. 3. GN開発合宿について\n\n"
