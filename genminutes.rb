@@ -73,7 +73,7 @@ class MinutesGenerator
   end
 
   def create_text
-    second_latest_date, latest_date = get_event_date_last_two
+    second_latest_date, latest_date = get_event_date_last_two(".*談話会$")
     text = ""
     text << "h1. #{@wiki_page.title}\n\n"
     text << "マネージャ: AAAA\n"
@@ -96,7 +96,7 @@ class MinutesGenerator
 
   def update_text
     text = @wiki_page.text
-    second_latest_date, latest_date = get_event_date_last_two
+    second_latest_date, latest_date = get_event_date_last_two(".*談話会$")
     get_issues(second_latest_date,latest_date)
     text << "h1. #{latest_date}\n\n"
     text << "参加者: 乃村，木村，吉井，檀上，村田，岡田，北垣，河野\n\n"
@@ -127,32 +127,14 @@ class MinutesGenerator
     @issues_for_non_target_review = @redmine_adapter.get_non_updated_issues(second_latest_date, project, versions)
   end
 
-  ### 最新のイベントの日付を取得 ###
-  def get_latest_event_date
-    event_list = @gcal.event_list_find_by_name(@google_calendar_id, ".*談話会$")
-    date_list = []
-    event_list.each do |ev|
-      if ev.start.date_time == nil
-        date_list << ev.start.date
-      else
-        date_list << ev.start.date_time.to_date
-      end
-    end
-    date_list.sort.reverse.first
+  ### イベントの最近の日付のデータを取得 ###
+  def get_latest_event_date(name)
+    @gcal.get_latest_event_date(@google_calendar_id, name)
   end
 
-  ### 最新の2つのイベントの日付を取得 ###
-  def get_event_date_last_two
-    event_list = @gcal.event_list_find_by_name(@google_calendar_id, ".*談話会$")
-    date_list = []
-    event_list.each do |ev|
-      if ev.start.date_time == nil
-        date_list << ev.start.date
-      else
-        date_list << ev.start.date_time.to_date
-      end
-    end
-    date_list.sort.reverse.take(2).reverse
+  ### イベントの最近2つの日付データを取得 ###
+  def get_event_date_last_two(name)
+    @gcal.get_event_date_last_two(@google_calendar_id, name)
   end
 end
 ##########################################

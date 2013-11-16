@@ -15,6 +15,34 @@ class GCal
     @service = @client.discovered_api('calendar', 'v3')
   end
 
+  ### 最新のイベントの日付を取得 ###
+  def get_latest_event_date(calendar_id, name)
+    even_list = event_list_find_by_name(calendar_id, name)
+    date_list = []
+    event_list.each do |ev|
+      if ev.start.date_time == nil
+        date_list << ev.start.date
+      else
+        date_list << ev.start.date_time.to_date
+      end
+    end
+    date_list.sort.reverse.first
+  end
+
+  ### 最新の2つのイベントの日付を取得 ###
+  def get_event_date_last_two(calendar_id, name)
+    event_list = event_list_find_by_name(calendar_id, name)
+    date_list = []
+    event_list.each do |ev|
+      if ev.start.date_time == nil
+        date_list << ev.start.date
+      else
+        date_list << ev.start.date_time.to_date
+      end
+    end
+    date_list.sort.reverse.take(2).reverse
+  end
+
   def event_list_find_by_name(calendar_id, name)
     ex_event_list = event_list(calendar_id)
     event_list = []
