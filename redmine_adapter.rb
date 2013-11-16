@@ -18,6 +18,8 @@ class RedmineAdapter
     @logfile = File.dirname(__FILE__) + '/log/genminutes.log'
   end
 
+  ### 更新があったissueを取得する ###
+  ### 現在の更新条件: 打合せから打合せ(イテレーション)の間で更新があったもので，終了状態ではないもの，特定のバージョンにひも付いているもの． ###
   def get_updated_issues(date, project, versions)
     get_issues if @issues.empty?
     updated_issues = []
@@ -29,6 +31,7 @@ class RedmineAdapter
     return updated_issues
   end
 
+  ### 更新がなかったissueを取得する ###
   def get_non_updated_issues(date, project, versions)
     get_issues if @issues.empty?
     non_updated_issues = []
@@ -40,6 +43,7 @@ class RedmineAdapter
     return non_updated_issues
   end
 
+  ### すべてのissue を取得する ###
   def get_issues
     timenow = Time.now.strftime("%Y%m%d%H%M%S")
     page = 1
@@ -62,6 +66,7 @@ class RedmineAdapter
     return @issues
   end
 
+  ### wikipageを取得する ###
   def get_wiki_page(project, title)
     # timenow = Time.now.strftime("%Y%m%d%H%M%S")
     wiki_page = `curl -v -H "Content-Type: application/json" -X GET -H "X-Redmine-API-Key: #{@api_key}" "#{@url}/projects/#{project}/wiki/#{title}.json"`
@@ -70,10 +75,13 @@ class RedmineAdapter
     RedmineWikiPage.create(wiki_page)
   end
 
+  ### wikipageを送る ###
   def send_wiki_page(project, title)
     `curl -v -H "Content-Type: application/json" -X PUT --data "@wiki_pages/#{title}.json" -u #{@usr}:#{@pass} "#{@url}/projects/#{project}/wiki/#{title}.json"`
   end
 
+  private
+  ### issueのファイルを読み込む ###
   def get_latest_issue(dir)
     filenames = `ls #{dir}/`.split("\n")
     filenames2 = Hash.new{ |h,k| h[k] = [] }
@@ -91,6 +99,7 @@ class RedmineAdapter
     return filenames2["#{latest}"]
   end
 
+  ### 最新日を取得する ###
   def latest_date(date1, date2)
     Time.parse(date1) > Time.parse(date2) ? date1 : date2
   end

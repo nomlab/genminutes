@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 class GCal
   def initialize(name)
     oauth_yaml = YAML.load_file(File.dirname(__FILE__) + '/.google-api.yaml')

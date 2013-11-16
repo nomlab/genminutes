@@ -65,14 +65,17 @@ class MinutesGenerator
     File.write(File.dirname(__FILE__) + '/latest_iteration.txt', @wiki_page.title)
   end
 
+  ### 議事録のテンプレートファイルの読み込み ###
   def load_template_minutes
     RedmineWikiPage.read("wiki_pages/template.json")
   end
 
+  ### タイトルを作成 ###
   def create_title
     @wiki_page.title = @wiki_page.next_wiki_page_title
   end
 
+  ### テキストを作成 ###
   def create_text
     second_latest_date, latest_date = get_event_date_last_two(".*談話会$")
     text = ""
@@ -91,10 +94,12 @@ class MinutesGenerator
     @wiki_page.text = text
   end
 
+  ### バージョンを指定 ###
   def create_version
     @wiki_page.version = 1
   end
 
+  ### テキストをアップデート ###
   def update_text
     text = @wiki_page.text
     second_latest_date, latest_date = get_event_date_last_two(".*談話会$")
@@ -116,11 +121,13 @@ class MinutesGenerator
     @wiki_page.text = text
   end
 
+  ### wiki_pageをredmineから取得 ###
   def get_wiki_page
     title = File.read(File.dirname(__FILE__) + '/latest_iteration.txt').chomp
     @wiki_page = @redmine_adapter.get_wiki_page(@project, title)
   end
 
+  ### issue(ticket)をredmineから取得 ###
   def get_issues(second_latest_date, latest_date)
     project = "LastNote"
     versions = YAML.load_file(File.dirname(__FILE__) + '/settings.yml')["versions"]

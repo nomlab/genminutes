@@ -1,10 +1,17 @@
+# -*- coding: utf-8 -*-
+##########################################
+### Issue
+##########################################
 class Issue
   attr_accessor :project_id, :project_name, :fixed_version_id, :fixed_version_name, :status_id, :status_name, :updated_on, :create_on
 end
 
+##########################################
+### Redmine Issue
+### Issueを継承している ###
+### 将来，Githubでも使えるようにするため
+##########################################
 class RedmineIssue < Issue
-#  attr_accessor :project_id, :tracker_id, :status_id, :priority_id, :subject, :description,
-#                :category_id, :fixed_version_id, :assigned_to_id, :parent_issue_id, :custom_fields, :watcher_user_ids
   attr_accessor :id, :subject, :assigned_to_id, :assigned_to_name, :project_id, :project_name,
                 :fixed_version_id, :fixed_version_name, :status_id, :status_name, :created_on, :updated_on
 

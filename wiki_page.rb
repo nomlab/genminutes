@@ -1,6 +1,15 @@
+# -*- coding: utf-8 -*-
+##########################################
+### WikiPage
+##########################################
 class WikiPage
 end
 
+##########################################
+### RedmineWikiPage
+### WikiPageを継承している
+### 将来，Githubでも使えるようにするため
+##########################################
 class RedmineWikiPage < WikiPage
   attr_accessor :data
 
