@@ -1,0 +1,48 @@
+#+TITLE:      GenMinutes
+##+AUTHOR:    吉井 英人
+##+EMAIL:     yoshii@swlab.cs.okayama-u.ac.jp
+##+DATE:      2014-3-4
+* GenMinutesとは
+GenMinutesとは，GN談話会のイテレーション記録を作成するツールである．
+イテレーション記録とは，GN談話会における議事録である．
+イテレーションでの話し合いの内容を記載する．
+また，イテレーション記録では，前回から更新があったチケット，更新がなかったチケットを記載している．
+
+GenMinutesでは，イテレーションのひな形を自動的に作成する．
+また，更新があったチケット，更新がなかったチケットを自動的に記載する．
+* 実行方法
+#+BEGIN_EXAMPLE
+% ruby genminutes.rb
+#+END_EXAMPLE
+* 設定ファイル
+** settings.yml
+#+BEGIN_EXAMPLE
+api_key: xxxxxx 
+usr: xxxxxx 
+pass: xxxxxx 
+google_calendar_id: xxxxxx@gmail.com 
+url: http://xxx.xxx 
+project: xxx 
+versions:
+  - xxx 
+#+END_EXAMPLE
+| 要素               | 説明                       |
+|--------------------+----------------------------|
+| api_key            | Redmineのapiキー           |
+| usr                | Redmineのユーザのid        |
+| pass               | Redmine                    |
+| google_calendar_id | GoogleカレンダのカレンダID |
+| url                | RedmineのアクセスURL       |
+| project            | RedmineのプロジェクトID    |
+| versions           | 対象バージョン             |
+** latest_iteration.txt
+最新のイテレーションを記載．
+例
+#+BEGIN_EXAMPLE
+Itr0085
+#+END_EXAMPLE
+* 運用方法
++ Googleカレンダから次回GN談話会の日付を取得
++ 次回GN談話会の日付の3日前にチケットの更新あり，更新なしを記載
++ 次回Itr記録のひな形を作成
+
