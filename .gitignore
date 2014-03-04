@@ -1,3 +1,5 @@
 settings.yml
-issues/
 wiki_pages/
+issues/
+log/
+.google-api.yaml
